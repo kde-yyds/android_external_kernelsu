@@ -2,9 +2,11 @@ package me.weishu.kernelsu.ui.component
 
 import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Cottage
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,7 +18,6 @@ import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.ksuApp
 import me.weishu.kernelsu.ui.LocalHandlePageChange
 import me.weishu.kernelsu.ui.LocalPagerState
 import me.weishu.kernelsu.ui.util.rootAvailable
@@ -29,7 +30,7 @@ fun BottomBar(
     hazeState: HazeState,
     hazeStyle: HazeStyle
 ) {
-    val isManager = Natives.becomeManager(ksuApp.packageName)
+    val isManager = Natives.isManager
     val fullFeatured = isManager && !Natives.requireNewKernel() && rootAvailable()
 
     val page = LocalPagerState.current.targetPage
@@ -37,7 +38,7 @@ fun BottomBar(
 
     if (!fullFeatured) return
 
-    val item = BottomBarDestination.entries.mapIndexed { index, destination ->
+    val item = BottomBarDestination.entries.map { destination ->
         NavigationItem(
             label = stringResource(destination.label),
             icon = destination.icon,
@@ -62,7 +63,9 @@ enum class BottomBarDestination(
     @get:StringRes val label: Int,
     val icon: ImageVector,
 ) {
+    ModuleRepo(R.string.module_repos, Icons.Rounded.CloudDownload),
+    Module(R.string.module, Icons.Rounded.Extension),
     Home(R.string.home, Icons.Rounded.Cottage),
     SuperUser(R.string.superuser, Icons.Rounded.Security),
-    Module(R.string.module, Icons.Rounded.Extension)
+    Setting(R.string.settings, Icons.Rounded.Settings)
 }

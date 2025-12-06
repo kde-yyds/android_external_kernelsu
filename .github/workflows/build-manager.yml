@@ -2,16 +2,23 @@ name: Build Manager
 
 on:
   push:
-    branches: [ "main", "ci" ]
+    branches: [ "main", "dev", "ci" ]
     paths:
       - '.github/workflows/build-manager.yml'
+      - '.github/workflows/build-lkm.yml'
+      - '.github/workflows/ksud.yml'
       - 'manager/**'
       - 'kernel/**'
-      - 'userspace/ksud/**'
+      - 'userspace/**'
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "dev" ]
     paths:
+      - '.github/workflows/build-manager.yml'
+      - '.github/workflows/build-lkm.yml'
+      - '.github/workflows/ksud.yml'
       - 'manager/**'
+      - 'kernel/**'
+      - 'userspace/**'
   workflow_call:
 
 jobs:
@@ -28,6 +35,16 @@ jobs:
             os: ubuntu-latest
           - target: x86_64-linux-android
             os: ubuntu-latest
+    uses: ./.github/workflows/ksud.yml
+    with:
+      target: ${{ matrix.target }}
+      os: ${{ matrix.os }}
+  
+  build-ksud-extra:
+    needs: build-lkm
+    strategy:
+      matrix:
+        include:
           - target: x86_64-pc-windows-gnu # windows pc
             os: ubuntu-latest
           - target: x86_64-apple-darwin # Intel mac
@@ -52,7 +69,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -66,7 +83,7 @@ jobs:
           fi
 
       - name: Write key
-        if: ${{ ( github.event_name != 'pull_request' && github.ref == 'refs/heads/main' ) || github.ref_type == 'tag' }}
+        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
         run: |
           if [ ! -z "${{ secrets.KEYSTORE }}" ]; then
             {
@@ -79,25 +96,25 @@ jobs:
           fi
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
       - name: Download arm64 ksud
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ksud-aarch64-linux-android
           path: .
 
       - name: Download x86_64 ksud
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: ksud-x86_64-linux-android
           path: .
@@ -113,15 +130,15 @@ jobs:
         run: ./gradlew clean assembleRelease
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        if: ${{ ( github.event_name != 'pull_request' && github.ref == 'refs/heads/main' ) || github.ref_type == 'tag' }}
+        uses: actions/upload-artifact@v5
+        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
         with:
           name: manager
           path: manager/app/build/outputs/apk/release/*.apk
 
       - name: Upload mappings
-        uses: actions/upload-artifact@v4
-        if: ${{ ( github.event_name != 'pull_request' && github.ref == 'refs/heads/main' ) || github.ref_type == 'tag' }}
+        uses: actions/upload-artifact@v5
+        if: ${{ ( github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev' )) || github.ref_type == 'tag' }}
         with:
           name: "mappings"
           path: "manager/app/build/outputs/mapping/release/"
@@ -144,6 +161,7 @@ jobs:
           COMMIT_URL: ${{ github.event.head_commit.url }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TITLE: Manager
+          BRANCH: ${{ github.ref_name }}
         run: |
           if [ ! -z "${{ secrets.BOT_TOKEN }}" ]; then
             export VERSION=$(git rev-list --count HEAD)

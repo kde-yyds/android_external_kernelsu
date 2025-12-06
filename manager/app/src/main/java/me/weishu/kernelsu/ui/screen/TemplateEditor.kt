@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInteropFilter
 import androidx.compose.ui.platform.LocalContext
@@ -34,6 +35,11 @@ import androidx.lifecycle.compose.dropUnlessResumed
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.annotation.RootGraph
 import com.ramcosta.composedestinations.result.ResultBackNavigator
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.EditText
@@ -79,6 +85,11 @@ fun TemplateEditorScreen(
     }
 
     val scrollBehavior = MiuixScrollBehavior()
+    val hazeState = remember { HazeState() }
+    val hazeStyle = HazeStyle(
+        backgroundColor = colorScheme.surface,
+        tint = HazeTint(colorScheme.surface.copy(0.8f))
+    )
 
     BackHandler {
         navigator.navigateBack(result = !readOnly)
@@ -100,6 +111,7 @@ fun TemplateEditorScreen(
                     stringResource(R.string.app_profile_template_edit)
                 },
                 readOnly = readOnly,
+                isCreation = isCreation,
                 onBack = dropUnlessResumed { navigator.navigateBack(result = !readOnly) },
                 onDelete = {
                     if (deleteAppProfileTemplate(template.id)) {
@@ -127,6 +139,8 @@ fun TemplateEditorScreen(
                     }
                 },
                 scrollBehavior = scrollBehavior,
+                hazeState = hazeState,
+                hazeStyle = hazeStyle,
             )
         },
         popupHost = { },
@@ -138,6 +152,7 @@ fun TemplateEditorScreen(
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
+                .hazeSource(state = hazeState)
                 .pointerInteropFilter {
                     // disable click and ripple if readOnly
                     readOnly
@@ -151,9 +166,7 @@ fun TemplateEditorScreen(
                         .fillMaxWidth()
                         .padding(12.dp),
                 ) {
-                    var errorHint by remember {
-                        mutableStateOf(false)
-                    }
+                    var errorHint by rememberSaveable { mutableStateOf(false) }
 
                     TextEdit(
                         label = stringResource(id = R.string.app_profile_template_name),
@@ -175,15 +188,7 @@ fun TemplateEditorScreen(
                         text = template.id,
                         isError = errorHint
                     ) { value ->
-                        errorHint = if (value.isEmpty()) {
-                            false
-                        } else if (isTemplateExist(value)) {
-                            true
-                        } else if (!isValidTemplateId(value)) {
-                            true
-                        } else {
-                            false
-                        }
+                        errorHint = value.isNotEmpty() && (isTemplateExist(value) || !isValidTemplateId(value))
                         template = template.copy(id = value)
                     }
                     TextEdit(
@@ -297,12 +302,21 @@ fun saveTemplate(template: TemplateViewModel.TemplateInfo, isCreation: Boolean =
 private fun TopBar(
     title: String,
     readOnly: Boolean,
+    isCreation: Boolean,
     onBack: () -> Unit,
     onDelete: () -> Unit = {},
     onSave: () -> Unit = {},
     scrollBehavior: ScrollBehavior,
+    hazeState: HazeState,
+    hazeStyle: HazeStyle,
 ) {
     TopAppBar(
+        modifier = Modifier.hazeEffect(hazeState) {
+            style = hazeStyle
+            blurRadius = 30.dp
+            noiseFactor = 0f
+        },
+        color = Color.Transparent,
         title = title,
         navigationIcon = {
             IconButton(
@@ -312,33 +326,37 @@ private fun TopBar(
                 Icon(
                     imageVector = MiuixIcons.Useful.Back,
                     contentDescription = null,
-                    tint = colorScheme.onBackground
+                    tint = colorScheme.onSurface
                 )
             }
         },
         actions = {
-            if (readOnly) {
-                return@TopAppBar
-            }
-            IconButton(
-                modifier = Modifier.padding(end = 16.dp),
-                onClick = onDelete
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Useful.Delete,
-                    contentDescription = stringResource(id = R.string.app_profile_template_delete),
-                    tint = colorScheme.onBackground
-                )
-            }
-            IconButton(
-                modifier = Modifier.padding(end = 16.dp),
-                onClick = onSave
-            ) {
-                Icon(
-                    imageVector = MiuixIcons.Useful.Confirm,
-                    contentDescription = stringResource(id = R.string.app_profile_template_save),
-                    tint = colorScheme.onBackground
-                )
+            when {
+                !readOnly && !isCreation -> {
+                    IconButton(
+                        modifier = Modifier.padding(end = 16.dp),
+                        onClick = onDelete
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Useful.Delete,
+                            contentDescription = stringResource(id = R.string.app_profile_template_delete),
+                            tint = colorScheme.onBackground
+                        )
+                    }
+                }
+
+                isCreation -> {
+                    IconButton(
+                        modifier = Modifier.padding(end = 16.dp),
+                        onClick = onSave
+                    ) {
+                        Icon(
+                            imageVector = MiuixIcons.Useful.Confirm,
+                            contentDescription = stringResource(id = R.string.app_profile_template_save),
+                            tint = colorScheme.onBackground
+                        )
+                    }
+                }
             }
         },
         scrollBehavior = scrollBehavior

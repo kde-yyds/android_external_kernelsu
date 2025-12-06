@@ -38,7 +38,6 @@
     <string name="module_uninstall_failed">فشل إلغاء تثبيت %s</string>
     <string name="module_version">الإصدار</string>
     <string name="module_author">المطور</string>
-    <string name="module_overlay_fs_not_available">الوحدات غير متوفرة حيث يتم تعطيل نظام الملفات المتراكب بواسطة النواة!</string>
     <string name="refresh">إنعاش</string>
     <string name="show_system_apps">إظهار تطبيقات النظام</string>
     <string name="hide_system_apps">إخفاء تطبيقات النظام</string>
@@ -50,7 +49,7 @@
     <string name="home_learn_kernelsu_url">https://kernelsu.org/guide/what-is-kernelsu.html</string>
     <string name="home_click_to_learn_kernelsu">تعرف على كيفية تثبيت KernelSU واستخدام الإضافات</string>
     <string name="home_support_title">إدعمنا</string>
-    <string name="home_support_content">KernelSU سيظل دائماً مجانياً ومفتوح المصدر. مع ذلك، يمكنك أن تظهر لنا أنك تهتم بالتبرع.</string>
+    <string name="home_support_content">KernelSU سيظل دائماً مجانياً ومفتوح المصدر. مع ذلك، يمكنك متى ما استطعت أن تظهر لنا أنك تهتم بالتبرع.</string>
     <string name="about_source_code"><![CDATA[أنظر إلى مصدر البرمجة في %1$s<br/>إنضم إلى قناتنا في %2$s ]]></string>
     <string name="profile_capabilities">القدرات</string>
     <string name="module_update">تحديث</string>
@@ -117,8 +116,6 @@
 \nأستمرار؟</string>
     <string name="select_kmi">اختر KMI</string>
     <string name="select_file_tip">يوصى باستخدام صورة القسم %1$s</string>
-    <string name="shrink_sparse_image">تصغير الصورة المتفرقة</string>
-    <string name="shrink_sparse_image_message">قم بتغيير حجم الصورة المتفرقة حيث توجد الإضافة إلى حجمها الفعلي. لاحظ أن هذا قد يتسبب في عمل الإضافة بشكل غير طبيعي، لذا يرجى استخدامها فقط عند الضرورة (مثل النسخ الاحتياطي).</string>
     <string name="settings_uninstall">إلغاء التثبيت</string>
     <string name="settings_uninstall_temporary">إلغاء التثبيت مؤقتًا</string>
     <string name="settings_uninstall_permanent">إلغاء التثبيت بشكل دائم</string>

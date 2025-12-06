@@ -9,7 +9,7 @@
     <string name="home_module_count">Módulos: %d</string>
     <string name="home_unsupported">Sem suporte</string>
     <string name="home_unsupported_reason">KernelSU suporta apenas kernels GKI agora</string>
-    <string name="home_kernel">Kernel</string>
+    <string name="home_kernel">Versão do kernel</string>
     <string name="home_manager_version">Versão do gerenciador</string>
     <string name="home_fingerprint">Impressão digital</string>
     <string name="home_selinux_status">Status do SELinux</string>
@@ -38,7 +38,6 @@
     <string name="module_uninstall_failed">Não foi possível desinstalar %s</string>
     <string name="module_version">Versão</string>
     <string name="module_author">Autor</string>
-    <string name="module_overlay_fs_not_available">Os módulos estão indisponíveis porque OverlayFS está desabilitado pelo kernel!</string>
     <string name="refresh">Atualizar</string>
     <string name="show_system_apps">Mostrar apps do sistema</string>
     <string name="hide_system_apps">Ocultar apps do sistema</string>
@@ -103,7 +102,7 @@
     <string name="app_profile_template_delete">Excluir</string>
     <string name="app_profile_template_import_empty">A área de transferência está vazia!</string>
     <string name="app_profile_template_view">Ver modelo</string>
-    <string name="settings_check_update">Verificar por atualização</string>
+    <string name="settings_check_update">Verificar por atualizações</string>
     <string name="settings_check_update_summary">Verifique automaticamente se há atualizações ao abrir o app</string>
     <string name="grant_root_failed">Falha ao conceder acesso root!</string>
     <string name="open">Abrir</string>
@@ -118,8 +117,6 @@
     <string name="install_next">Próximo</string>
     <string name="select_file_tip">A imagem da partição %1$s é recomendada</string>
     <string name="select_kmi">Selecionar KMI</string>
-    <string name="shrink_sparse_image">Minimizar imagem esparsa</string>
-    <string name="shrink_sparse_image_message">Redimensione a imagem esparsa onde o módulo está localizado para seu tamanho real. Observe que isso pode fazer com que o módulo funcione de forma anormal, portanto, use-o somente quando necessário (como um backup).</string>
     <string name="settings_uninstall">Desinstalar</string>
     <string name="settings_uninstall_temporary">Desinstalar temporariamente</string>
     <string name="settings_uninstall_permanent">Desinstalar permanentemente</string>

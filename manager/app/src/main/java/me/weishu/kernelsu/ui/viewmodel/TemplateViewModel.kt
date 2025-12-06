@@ -35,7 +35,6 @@ const val TAG = "TemplateViewModel"
 
 class TemplateViewModel : ViewModel() {
     companion object {
-
         private var templates by mutableStateOf<List<TemplateInfo>>(emptyList())
     }
 
@@ -277,22 +276,22 @@ fun TemplateViewModel.TemplateInfo.toJSON(): JSONObject {
             put(
                 "groups", JSONArray(
                     Groups.entries.filter {
-                    template.groups.contains(it.gid)
-                }.map {
-                    it.name
-                }
-            ))
+                        template.groups.contains(it.gid)
+                    }.map {
+                        it.name
+                    }
+                ))
         }
 
         if (template.capabilities.isNotEmpty()) {
             put(
                 "capabilities", JSONArray(
                     Capabilities.entries.filter {
-                    template.capabilities.contains(it.cap)
-                }.map {
-                    it.name
-                }
-            ))
+                        template.capabilities.contains(it.cap)
+                    }.map {
+                        it.name
+                    }
+                ))
         }
 
         if (template.context.isNotEmpty()) {

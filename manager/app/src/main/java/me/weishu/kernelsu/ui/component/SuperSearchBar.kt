@@ -1,5 +1,6 @@
 package me.weishu.kernelsu.ui.component
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -63,6 +64,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.hazeEffect
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Text
@@ -70,7 +74,6 @@ import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.icons.basic.Search
 import top.yukonga.miuix.kmp.icon.icons.basic.SearchCleanup
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.utils.BackHandler
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 
 // Search Status Class
@@ -105,16 +108,34 @@ class SearchStatus(val label: String) {
     fun TopAppBarAnim(
         modifier: Modifier = Modifier,
         visible: Boolean = shouldCollapsed(),
-        content: @Composable() () -> Unit
+        hazeState: HazeState? = null,
+        hazeStyle: HazeStyle? = null,
+        content: @Composable () -> Unit
     ) {
         val topAppBarAlpha = animateFloatAsState(
             if (visible) 1f else 0f,
             animationSpec = tween(if (visible) 550 else 0, easing = FastOutSlowInEasing),
         )
-        Box(
-            modifier = modifier.alpha(topAppBarAlpha.value),
-        ) {
-            content()
+        Box(modifier = modifier) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .then(
+                        if (hazeState != null && hazeStyle != null) {
+                            Modifier.hazeEffect(hazeState) {
+                                style = hazeStyle
+                                blurRadius = 30.dp
+                                noiseFactor = 0f
+                            }
+                        } else {
+                            Modifier.background(colorScheme.surface)
+                        }
+                    )
+            )
+            Box(
+                modifier = Modifier
+                    .alpha(topAppBarAlpha.value)
+            ) { content() }
         }
     }
 
@@ -130,6 +151,8 @@ fun SearchStatus.SearchBox(
     },
     searchBarTopPadding: Dp = 12.dp,
     contentPadding: PaddingValues = PaddingValues(0.dp),
+    hazeState: HazeState,
+    hazeStyle: HazeStyle,
     content: @Composable (MutableState<Dp>) -> Unit
 ) {
     val searchStatus = this
@@ -158,7 +181,11 @@ fun SearchStatus.SearchBox(
             .pointerInput(Unit) {
                 detectTapGestures { searchStatus.current = SearchStatus.Status.EXPANDING }
             }
-            .background(colorScheme.background)
+            .hazeEffect(hazeState) {
+                style = hazeStyle
+                blurRadius = 30.dp
+                noiseFactor = 0f
+            }
     ) {
         collapseBar(searchStatus, searchBarTopPadding, contentPadding)
     }
@@ -201,7 +228,7 @@ fun SearchStatus.SearchPager(
     ) {
         searchStatus.onAnimationComplete()
     }
-    val backgroundAlpha by animateFloatAsState(
+    val surfaceAlpha by animateFloatAsState(
         if (searchStatus.shouldExpand()) 1f else 0f,
         animationSpec = tween(200, easing = FastOutSlowInEasing)
     )
@@ -210,7 +237,7 @@ fun SearchStatus.SearchPager(
         modifier = Modifier
             .fillMaxSize()
             .zIndex(5f)
-            .background(colorScheme.background.copy(alpha = backgroundAlpha))
+            .background(colorScheme.surface.copy(alpha = surfaceAlpha))
             .semantics { onClick { false } }
             .then(
                 if (!searchStatus.isCollapsed()) Modifier.pointerInput(Unit) { } else Modifier
@@ -220,26 +247,27 @@ fun SearchStatus.SearchPager(
             Modifier
                 .fillMaxWidth()
                 .padding(top = topPadding)
-                .alpha(if (searchStatus.isCollapsed()) 0f else 1f),
-            horizontalArrangement = Arrangement.Center,
+                .then(
+                    if (!searchStatus.isCollapsed()) Modifier.background(colorScheme.surface)
+                    else Modifier
+                ),
+            horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            AnimatedVisibility(
-                visible = !searchStatus.isCollapsed(),
-                modifier = Modifier.weight(1f),
-                enter = fadeIn(),
-                exit = fadeOut()
-            ) {
-                expandBar(searchStatus, searchBarTopPadding)
+            if (!searchStatus.isCollapsed()) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(colorScheme.surface)
+                ) {
+                    expandBar(searchStatus, searchBarTopPadding)
+                }
             }
             AnimatedVisibility(
                 visible = searchStatus.isExpand() || searchStatus.isAnimatingExpand(),
                 enter = expandHorizontally() + slideInHorizontally(initialOffsetX = { it }),
                 exit = shrinkHorizontally() + slideOutHorizontally(targetOffsetX = { it })
             ) {
-                BackHandler(enabled = true) {
-                    searchStatus.current = SearchStatus.Status.COLLAPSING
-                }
                 Text(
                     text = stringResource(android.R.string.cancel),
                     fontWeight = FontWeight.Bold,
@@ -252,6 +280,9 @@ fun SearchStatus.SearchPager(
                             indication = null
                         ) { searchStatus.current = SearchStatus.Status.COLLAPSING }
                 )
+                BackHandler(enabled = true) {
+                    searchStatus.current = SearchStatus.Status.COLLAPSING
+                }
             }
         }
         AnimatedVisibility(
@@ -269,7 +300,6 @@ fun SearchStatus.SearchPager(
                 SearchStatus.ResultStatus.SHOW -> LazyColumn(
                     Modifier
                         .fillMaxSize()
-                        .padding(top = 12.dp)
                         .overScrollVertical(),
                 ) {
                     result()
@@ -324,8 +354,9 @@ fun SearchBar(
             }
         },
         modifier = Modifier
+            .fillMaxWidth()
             .padding(horizontal = 12.dp)
-            .padding(top = searchBarTopPadding)
+            .padding(top = searchBarTopPadding, bottom = 6.dp)
             .focusRequester(focusRequester),
         onSearch = { it },
         expanded = searchStatus.shouldExpand(),
@@ -369,7 +400,7 @@ fun SearchBarFake(
                 end = innerPadding.calculateEndPadding(layoutDirection)
             )
             .padding(top = searchBarTopPadding, bottom = 6.dp),
-        onSearch = { it },
+        onSearch = { },
         enabled = false,
         expanded = false,
         onExpandedChange = { }
