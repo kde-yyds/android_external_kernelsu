@@ -4,6 +4,7 @@ import android.os.Parcelable
 import androidx.annotation.Keep
 import androidx.compose.runtime.Immutable
 import kotlinx.parcelize.Parcelize
+import kotlinx.serialization.Serializable
 
 /**
  * @author weishu
@@ -73,15 +74,6 @@ object Natives {
     external fun setKernelUmountEnabled(enabled: Boolean): Boolean
 
     /**
-     * Enhanced security can be enabled/disabled.
-     *  0: disabled
-     *  1: enabled
-     *  negative : error
-     */
-    external fun isEnhancedSecurityEnabled(): Boolean
-    external fun setEnhancedSecurityEnabled(enabled: Boolean): Boolean
-
-    /**
      * Get the user name for the uid.
      */
     external fun getUserName(uid: Int): String?
@@ -110,9 +102,10 @@ object Natives {
         return version != -1 && version < MINIMAL_SUPPORTED_KERNEL
     }
 
+    @Keep
     @Immutable
     @Parcelize
-    @Keep
+    @Serializable
     data class Profile(
         // and there is a default profile for root and non-root
         val name: String,

@@ -1,6 +1,5 @@
 package me.weishu.kernelsu.ui.component
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -63,7 +62,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.max
 import androidx.compose.ui.zIndex
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
@@ -71,8 +74,8 @@ import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.InputField
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.basic.Search
-import top.yukonga.miuix.kmp.icon.icons.basic.SearchCleanup
+import top.yukonga.miuix.kmp.icon.basic.Search
+import top.yukonga.miuix.kmp.icon.basic.SearchCleanup
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 
@@ -223,7 +226,11 @@ fun SearchStatus.SearchPager(
     val searchStatus = this
     val systemBarsPadding = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
     val topPadding by animateDpAsState(
-        if (searchStatus.shouldExpand()) systemBarsPadding + 5.dp else searchStatus.offsetY,
+        targetValue = if (searchStatus.shouldExpand()) {
+            systemBarsPadding + 5.dp
+        } else {
+            max(searchStatus.offsetY, 0.dp)
+        },
         animationSpec = tween(300, easing = LinearOutSlowInEasing)
     ) {
         searchStatus.onAnimationComplete()
@@ -278,10 +285,19 @@ fun SearchStatus.SearchPager(
                             interactionSource = null,
                             enabled = searchStatus.isExpand(),
                             indication = null
-                        ) { searchStatus.current = SearchStatus.Status.COLLAPSING }
+                        ) {
+                            searchStatus.current = SearchStatus.Status.COLLAPSING
+                        }
                 )
-                BackHandler(enabled = true) {
-                    searchStatus.current = SearchStatus.Status.COLLAPSING
+                run {
+                    val navEventState = rememberNavigationEventState(NavigationEventInfo.None)
+                    NavigationBackHandler(
+                        state = navEventState,
+                        isBackEnabled = true,
+                        onBackCompleted = {
+                            searchStatus.current = SearchStatus.Status.COLLAPSING
+                        }
+                    )
                 }
             }
         }

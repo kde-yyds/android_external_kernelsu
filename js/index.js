@@ -110,6 +110,10 @@ export function fullScreen(isFullScreen) {
   ksu.fullScreen(isFullScreen);
 }
 
+export function enableInsets(enable) {
+  ksu.enableInsets(enable);
+}
+
 export function toast(message) {
   ksu.toast(message);
 }
@@ -135,4 +139,8 @@ export function getPackagesInfo(packages) {
   } catch (error) {
     return [];
   }
+}
+
+export function exit() {
+  ksu.exit();
 }

@@ -1,13 +1,15 @@
 package me.weishu.kernelsu.ui.component
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Cottage
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -16,9 +18,9 @@ import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.hazeEffect
+import kotlinx.coroutines.launch
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
-import me.weishu.kernelsu.ui.LocalHandlePageChange
 import me.weishu.kernelsu.ui.LocalPagerState
 import me.weishu.kernelsu.ui.util.rootAvailable
 import top.yukonga.miuix.kmp.basic.NavigationBar
@@ -33,8 +35,8 @@ fun BottomBar(
     val isManager = Natives.isManager
     val fullFeatured = isManager && !Natives.requireNewKernel() && rootAvailable()
 
-    val page = LocalPagerState.current.targetPage
-    val handlePageChange = LocalHandlePageChange.current
+    val pageState = LocalPagerState.current
+    val coroutineScope = rememberCoroutineScope()
 
     if (!fullFeatured) return
 
@@ -54,8 +56,12 @@ fun BottomBar(
             },
         color = Color.Transparent,
         items = item,
-        selected = page,
-        onClick = handlePageChange
+        selected = pageState.targetPage,
+        onClick = {
+            coroutineScope.launch {
+                pageState.animateScrollToPage(page = it, animationSpec = tween(easing = EaseInOut))
+            }
+        }
     )
 }
 
@@ -63,9 +69,8 @@ enum class BottomBarDestination(
     @get:StringRes val label: Int,
     val icon: ImageVector,
 ) {
-    ModuleRepo(R.string.module_repos, Icons.Rounded.CloudDownload),
-    Module(R.string.module, Icons.Rounded.Extension),
     Home(R.string.home, Icons.Rounded.Cottage),
     SuperUser(R.string.superuser, Icons.Rounded.Security),
+    Module(R.string.module, Icons.Rounded.Extension),
     Setting(R.string.settings, Icons.Rounded.Settings)
 }

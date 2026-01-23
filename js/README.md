@@ -101,6 +101,20 @@ import { fullScreen } from 'kernelsu';
 fullScreen(true);
 ```
 
+### enableInsets
+
+Request the WebView to set padding to 0 or system bar insets
+
+- tips: this is disabled by default but if you request resource from `internal/insets.css`, this will be enabled automatically.
+- To get insets value and enable this automatically, you can
+  - add `@import "https://mui.kernelsu.org/internal/insets.css";` in css OR
+  - add `<link rel="stylesheet" type="text/css" href="/internal/insets.css" />` in html.
+
+```javascript
+import { enableInsets } from 'kernelsu';
+enableInsets(true);
+```
+
 ### toast
 
 Show a toast message.
@@ -163,3 +177,12 @@ An object contains:
 - `appLabel` `<string>` Display name of the application.
 - `isSystem` `<boolean>` Whether the application is a system app.
 - `uid` `<number>` UID of the application.
+
+### exit
+
+Exit the current WebUI activity.
+
+```javascript
+import { exit } from 'kernelsu';
+exit();
+```

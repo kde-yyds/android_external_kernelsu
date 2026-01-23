@@ -45,7 +45,6 @@ class TemplateViewModel : ViewModel() {
         val description: String = "",
         val author: String = "",
         val local: Boolean = true,
-
         val namespace: Int = Natives.Profile.Namespace.INHERITED.ordinal,
         val uid: Int = Natives.ROOT_UID,
         val gid: Int = Natives.ROOT_GID,
@@ -118,19 +117,16 @@ class TemplateViewModel : ViewModel() {
         }
     }
 
-    suspend fun exportTemplates(onTemplateEmpty: () -> Unit, callback: (String) -> Unit) {
-        withContext(Dispatchers.IO) {
-            val templates = listAppProfileTemplates().mapNotNull(::getTemplateInfoById).filter {
-                it.local
-            }
-            templates.ifEmpty {
-                onTemplateEmpty()
-                return@withContext
-            }
-            JSONArray(templates.map {
-                it.toJSON()
-            }).toString().let(callback)
+    suspend fun exportTemplates(onTemplateEmpty: suspend () -> Unit, callback: suspend (String) -> Unit) {
+        val result = withContext(Dispatchers.IO) {
+            val templates = listAppProfileTemplates()
+                .mapNotNull(::getTemplateInfoById)
+                .filter { it.local }
+            if (templates.isEmpty()) return@withContext null
+            JSONArray(templates.map { it.toJSON() }).toString()
         }
+
+        if (result == null) onTemplateEmpty() else callback(result)
     }
 }
 
@@ -142,7 +138,7 @@ private fun fetchRemoteTemplates() {
             if (!response.isSuccessful) {
                 return
             }
-            val remoteTemplateIds = JSONArray(response.body!!.string())
+            val remoteTemplateIds = JSONArray(response.body.string())
             Log.i(TAG, "fetchRemoteTemplates: $remoteTemplateIds")
             0.until(remoteTemplateIds.length()).forEach { i ->
                 val id = remoteTemplateIds.getString(i)
@@ -154,7 +150,7 @@ private fun fetchRemoteTemplates() {
                         if (!response.isSuccessful) {
                             return@forEach
                         }
-                        response.body!!.string()
+                        response.body.string()
                     }
                 }.getOrNull() ?: return@forEach
                 Log.i(TAG, "template: $templateJson")

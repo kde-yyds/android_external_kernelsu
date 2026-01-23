@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.captionBar
 import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
@@ -31,6 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Security
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,18 +43,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
-import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.annotation.RootGraph
-import com.ramcosta.composedestinations.generated.destinations.AppProfileTemplateScreenDestination
-import com.ramcosta.composedestinations.generated.destinations.TemplateEditorScreenDestination
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -65,6 +66,8 @@ import me.weishu.kernelsu.ui.component.DropdownItem
 import me.weishu.kernelsu.ui.component.profile.AppProfileConfig
 import me.weishu.kernelsu.ui.component.profile.RootProfileConfig
 import me.weishu.kernelsu.ui.component.profile.TemplateConfig
+import me.weishu.kernelsu.ui.navigation3.LocalNavigator
+import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.util.forceStopApp
 import me.weishu.kernelsu.ui.util.getSepolicy
 import me.weishu.kernelsu.ui.util.launchApp
@@ -79,7 +82,6 @@ import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.ListPopup
 import top.yukonga.miuix.kmp.basic.ListPopupColumn
 import top.yukonga.miuix.kmp.basic.ListPopupDefaults
 import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
@@ -90,12 +92,12 @@ import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.extra.SuperDropdown
+import top.yukonga.miuix.kmp.extra.SuperListPopup
 import top.yukonga.miuix.kmp.extra.SuperSwitch
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Back
-import top.yukonga.miuix.kmp.icon.icons.useful.ImmersionMore
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.MoreCircle
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
-import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
@@ -104,11 +106,10 @@ import top.yukonga.miuix.kmp.utils.scrollEndHaptic
  * @date 2023/5/16.
  */
 @Composable
-@Destination<RootGraph>
 fun AppProfileScreen(
-    navigator: DestinationsNavigator,
-    appInfo: SuperUserViewModel.AppInfo,
+    packageName: String,
 ) {
+    val navigator = LocalNavigator.current
     val context = LocalContext.current
     val scrollBehavior = MiuixScrollBehavior()
     val hazeState = remember { HazeState() }
@@ -117,11 +118,21 @@ fun AppProfileScreen(
         tint = HazeTint(colorScheme.surface.copy(0.8f))
     )
     val scope = rememberCoroutineScope()
+    val appInfoState = remember(packageName) {
+        derivedStateOf {
+            SuperUserViewModel.apps.find { it.packageName == packageName }
+        }
+    }
+    val appInfo = appInfoState.value
+    if (appInfo == null) {
+        LaunchedEffect(Unit) {
+            navigator.pop()
+        }
+        return
+    }
     val failToUpdateAppProfile = stringResource(R.string.failed_to_update_app_profile).format(appInfo.label).format(appInfo.uid)
     val failToUpdateSepolicy = stringResource(R.string.failed_to_update_sepolicy).format(appInfo.label)
     val suNotAllowed = stringResource(R.string.su_not_allowed).format(appInfo.label)
-
-    val packageName = appInfo.packageName
     val sameUidApps = remember(appInfo.uid) {
         SuperUserViewModel.apps.filter { it.uid == appInfo.uid }
     }
@@ -146,7 +157,7 @@ fun AppProfileScreen(
     Scaffold(
         topBar = {
             TopBar(
-                onBack = dropUnlessResumed { navigator.popBackStack() },
+                onBack = dropUnlessResumed { navigator.pop() },
                 packageName = packageName,
                 showActions = !isUidGroup,
                 scrollBehavior = scrollBehavior,
@@ -159,7 +170,7 @@ fun AppProfileScreen(
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
-                .height(getWindowSize().height.dp)
+                .fillMaxHeight()
                 .padding(top = 16.dp)
                 .scrollEndHaptic()
                 .overScrollVertical()
@@ -194,16 +205,10 @@ fun AppProfileScreen(
                     affectedApps = sameUidApps,
                     onViewTemplate = {
                         getTemplateInfoById(it)?.let { info ->
-                            navigator.navigate(TemplateEditorScreenDestination(info)) {
-                                launchSingleTop = true
-                            }
+                            navigator.push(Route.TemplateEditor(info, readOnly = true))
                         }
                     },
-                    onManageTemplate = {
-                        navigator.navigate(AppProfileTemplateScreenDestination()) {
-                            launchSingleTop = true
-                        }
-                    },
+                    onManageTemplate = { navigator.push(Route.AppProfileTemplate) },
                     onProfileChange = {
                         scope.launch {
                             if (it.allowSu) {
@@ -364,7 +369,7 @@ private fun AppProfileInner(
                 .padding(bottom = 12.dp),
         ) {
             SuperSwitch(
-                leftAction = {
+                startAction = {
                     Icon(
                         imageVector = Icons.Rounded.Security,
                         contentDescription = null,
@@ -515,7 +520,7 @@ private fun AppProfileInner(
                 Spacer(Modifier.height(3.dp))
                 affectedApps.forEach { app ->
                     BasicComponent(
-                        leftAction = {
+                        startAction = {
                             AppIconImage(
                                 packageInfo = app.packageInfo,
                                 label = app.label,
@@ -563,8 +568,12 @@ private fun TopBar(
                 modifier = Modifier.padding(start = 16.dp),
                 onClick = onBack
             ) {
+                val layoutDirection = LocalLayoutDirection.current
                 Icon(
-                    imageVector = MiuixIcons.Useful.Back,
+                    modifier = Modifier.graphicsLayer {
+                        if (layoutDirection == LayoutDirection.Rtl) scaleX = -1f
+                    },
+                    imageVector = MiuixIcons.Back,
                     contentDescription = null,
                     tint = colorScheme.onBackground
                 )
@@ -579,16 +588,16 @@ private fun TopBar(
                     holdDownState = showTopPopup.value
                 ) {
                     Icon(
-                        imageVector = MiuixIcons.Useful.ImmersionMore,
+                        imageVector = MiuixIcons.MoreCircle,
                         tint = colorScheme.onSurface,
                         contentDescription = stringResource(id = R.string.settings)
                     )
                 }
-                ListPopup(
+                SuperListPopup(
                     show = showTopPopup,
                     onDismissRequest = { showTopPopup.value = false },
                     popupPositionProvider = ListPopupDefaults.ContextMenuPositionProvider,
-                    alignment = PopupPositionProvider.Align.TopRight,
+                    alignment = PopupPositionProvider.Align.TopEnd,
                 ) {
                     ListPopupColumn {
                         val items = listOf(
@@ -658,7 +667,7 @@ private fun ProfileBox(
         SuperDropdown(
             title = stringResource(R.string.profile),
             items = list,
-            leftAction = {
+            startAction = {
                 Icon(
                     Icons.Rounded.AccountCircle,
                     modifier = Modifier.padding(end = 16.dp),

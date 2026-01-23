@@ -7,7 +7,6 @@ import androidx.compose.material.icons.rounded.Create
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -35,7 +34,6 @@ fun TemplateConfig(
     onManageTemplate: () -> Unit = {},
     onProfileChange: (Natives.Profile) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
     val profileTemplates = listAppProfileTemplates()
     val noTemplates = profileTemplates.isEmpty()
 
@@ -43,7 +41,7 @@ fun TemplateConfig(
         SuperArrow(
             modifier = modifier,
             title = stringResource(R.string.app_profile_template_create),
-            leftAction = {
+            startAction = {
                 Icon(
                     Icons.Rounded.Create,
                     null,
@@ -79,9 +77,6 @@ fun TemplateConfig(
                             )
                         )
                     }
-                },
-                onClick = {
-                    expanded = !expanded
                 },
                 maxHeight = 280.dp
             )

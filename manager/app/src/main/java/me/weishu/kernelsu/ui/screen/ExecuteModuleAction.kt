@@ -1,7 +1,9 @@
 package me.weishu.kernelsu.ui.screen
 
+import android.annotation.SuppressLint
 import android.os.Environment
 import android.widget.Toast
+import androidx.activity.compose.LocalActivity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -28,18 +30,17 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.dropUnlessResumed
-import com.ramcosta.composedestinations.annotation.Destination
-import com.ramcosta.composedestinations.annotation.RootGraph
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -50,6 +51,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.ui.component.KeyEventBlocker
+import me.weishu.kernelsu.ui.navigation3.LocalNavigator
 import me.weishu.kernelsu.ui.util.runModuleAction
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
@@ -57,8 +59,8 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.SmallTopAppBar
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.icons.useful.Back
-import top.yukonga.miuix.kmp.icon.icons.useful.Save
+import top.yukonga.miuix.kmp.icon.extended.Back
+import top.yukonga.miuix.kmp.icon.extended.Download
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 import java.io.File
@@ -66,13 +68,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@SuppressLint("LocalContextGetResourceValueCall")
 @Composable
-@Destination<RootGraph>
-fun ExecuteModuleActionScreen(navigator: DestinationsNavigator, moduleId: String) {
+fun ExecuteModuleActionScreen(moduleId: String) {
+    val navigator = LocalNavigator.current
     var text by rememberSaveable { mutableStateOf("") }
     var tempText: String
     val logContent = rememberSaveable { StringBuilder() }
     val context = LocalContext.current
+    val activity = LocalActivity.current
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     var actionResult: Boolean
@@ -81,6 +85,11 @@ fun ExecuteModuleActionScreen(navigator: DestinationsNavigator, moduleId: String
         backgroundColor = colorScheme.surface,
         tint = HazeTint(colorScheme.surface.copy(0.8f))
     )
+
+    val fromShortcut = remember(activity) {
+        val intent = activity?.intent
+        intent?.getStringExtra("shortcut_type") == "module_action"
+    }
 
     LaunchedEffect(Unit) {
         if (text.isNotEmpty()) {
@@ -105,15 +114,26 @@ fun ExecuteModuleActionScreen(navigator: DestinationsNavigator, moduleId: String
                 actionResult = it
             }
         }
-        if (actionResult) navigator.popBackStack()
+        if (actionResult) {
+            if (fromShortcut) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.module_action_success),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            if (fromShortcut && activity != null) {
+                activity.finishAndRemoveTask()
+            } else {
+                navigator.pop()
+            }
+        }
     }
 
     Scaffold(
         topBar = {
             TopBar(
-                onBack = dropUnlessResumed {
-                    navigator.popBackStack()
-                },
+                onBack = dropUnlessResumed { navigator.pop() },
                 onSave = {
                     scope.launch {
                         val format = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss", Locale.getDefault())
@@ -187,8 +207,12 @@ private fun TopBar(
                 modifier = Modifier.padding(start = 16.dp),
                 onClick = onBack
             ) {
+                val layoutDirection = LocalLayoutDirection.current
                 Icon(
-                    imageVector = MiuixIcons.Useful.Back,
+                    modifier = Modifier.graphicsLayer {
+                        if (layoutDirection == LayoutDirection.Rtl) scaleX = -1f
+                    },
+                    imageVector = MiuixIcons.Back,
                     contentDescription = null,
                     tint = colorScheme.onBackground
                 )
@@ -200,7 +224,7 @@ private fun TopBar(
                 onClick = onSave
             ) {
                 Icon(
-                    imageVector = MiuixIcons.Useful.Save,
+                    imageVector = MiuixIcons.Download,
                     contentDescription = stringResource(id = R.string.save_log),
                     tint = colorScheme.onBackground
                 )

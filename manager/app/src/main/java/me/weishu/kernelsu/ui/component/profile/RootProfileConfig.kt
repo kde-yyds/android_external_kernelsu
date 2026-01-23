@@ -39,6 +39,7 @@ import top.yukonga.miuix.kmp.extra.CheckboxLocation
 import top.yukonga.miuix.kmp.extra.SuperArrow
 import top.yukonga.miuix.kmp.extra.SuperCheckbox
 import top.yukonga.miuix.kmp.extra.SuperDialog
+import top.yukonga.miuix.kmp.extra.SuperDropdown
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 
 @Composable
@@ -113,6 +114,15 @@ fun RootProfileConfig(
             )
         }
 
+        MountNameSpacePanel(profile = profile) {
+            onProfileChange(
+                profile.copy(
+                    namespace = it,
+                    rootUseDefault = false
+                )
+            )
+        }
+
         SELinuxPanel(profile = profile, onSELinuxChange = { domain, rules ->
             onProfileChange(
                 profile.copy(
@@ -160,7 +170,7 @@ fun GroupsPanel(selected: List<Groups>, closeSelection: (selection: Set<Groups>)
                         title = group.display,
                         summary = group.desc,
                         insideMargin = PaddingValues(horizontal = 30.dp, vertical = 16.dp),
-                        checkboxLocation = CheckboxLocation.Right,
+                        checkboxLocation = CheckboxLocation.End,
                         checked = currentSelection.value.contains(group),
                         holdDownState = currentSelection.value.contains(group),
                         onCheckedChange = { isChecked ->
@@ -218,6 +228,20 @@ fun GroupsPanel(selected: List<Groups>, closeSelection: (selection: Set<Groups>)
 }
 
 @Composable
+fun MountNameSpacePanel(
+    profile: Natives.Profile, onMntNamespaceChange: (namespaceType: Int) -> Unit
+) {
+    SuperDropdown(
+        title = stringResource(id = R.string.profile_namespace), items = listOf(
+            stringResource(id = R.string.profile_namespace_inherited),
+            stringResource(id = R.string.profile_namespace_global),
+            stringResource(id = R.string.profile_namespace_individual),
+        ), selectedIndex = profile.namespace, onSelectedIndexChange = { index ->
+            onMntNamespaceChange(index)
+        })
+}
+
+@Composable
 fun CapsPanel(
     selected: Collection<Capabilities>,
     closeSelection: (selection: Set<Capabilities>) -> Unit
@@ -246,7 +270,7 @@ fun CapsPanel(
                             title = cap.display,
                             summary = cap.desc,
                             insideMargin = PaddingValues(horizontal = 30.dp, vertical = 16.dp),
-                            checkboxLocation = CheckboxLocation.Right,
+                            checkboxLocation = CheckboxLocation.End,
                             checked = currentSelection.value.contains(cap),
                             holdDownState = currentSelection.value.contains(cap),
                             onCheckedChange = { isChecked ->

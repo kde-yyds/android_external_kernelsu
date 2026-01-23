@@ -5,6 +5,8 @@ import android.os.Build
 import android.system.Os
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,11 +32,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.material.icons.rounded.ErrorOutline
-import androidx.compose.material.icons.rounded.Link
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -53,8 +53,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.pm.PackageInfoCompat
-import com.ramcosta.composedestinations.generated.destinations.InstallScreenDestination
-import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
@@ -67,9 +65,12 @@ import me.weishu.kernelsu.KernelVersion
 import me.weishu.kernelsu.Natives
 import me.weishu.kernelsu.R
 import me.weishu.kernelsu.getKernelVersion
+import me.weishu.kernelsu.ui.LocalPagerState
 import me.weishu.kernelsu.ui.component.DropdownItem
 import me.weishu.kernelsu.ui.component.RebootListPopup
 import me.weishu.kernelsu.ui.component.rememberConfirmDialog
+import me.weishu.kernelsu.ui.navigation3.Navigator
+import me.weishu.kernelsu.ui.navigation3.Route
 import me.weishu.kernelsu.ui.theme.isInDarkTheme
 import me.weishu.kernelsu.ui.util.checkNewVersion
 import me.weishu.kernelsu.ui.util.getModuleCount
@@ -87,18 +88,18 @@ import top.yukonga.miuix.kmp.basic.Scaffold
 import top.yukonga.miuix.kmp.basic.ScrollBehavior
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.basic.TopAppBar
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.Link
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme
 import top.yukonga.miuix.kmp.theme.MiuixTheme.isDynamicColor
 import top.yukonga.miuix.kmp.utils.PressFeedbackType
-import top.yukonga.miuix.kmp.utils.getWindowSize
 import top.yukonga.miuix.kmp.utils.overScrollVertical
 import top.yukonga.miuix.kmp.utils.scrollEndHaptic
 
 @Composable
 fun HomePager(
-    pagerState: PagerState,
-    navigator: DestinationsNavigator,
+    navigator: Navigator,
     bottomInnerPadding: Dp
 ) {
     val kernelVersion = getKernelVersion()
@@ -117,15 +118,6 @@ fun HomePager(
     Scaffold(
         topBar = {
             TopBar(
-                kernelVersion = kernelVersion,
-                onInstallClick = {
-                    navigator.navigate(InstallScreenDestination) {
-                        popUpTo(InstallScreenDestination) {
-                            inclusive = true
-                        }
-                        launchSingleTop = true
-                    }
-                },
                 scrollBehavior = scrollBehavior,
                 hazeState = hazeState,
                 hazeStyle = hazeStyle,
@@ -136,7 +128,7 @@ fun HomePager(
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
-                .height(getWindowSize().height.dp)
+                .fillMaxHeight()
                 .scrollEndHaptic()
                 .overScrollVertical()
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
@@ -146,12 +138,13 @@ fun HomePager(
             overscrollEffect = null,
         ) {
             item {
-                val coroutineScope = rememberCoroutineScope()
                 val isManager = Natives.isManager
                 val ksuVersion = if (isManager) Natives.version else null
                 val lkmMode = ksuVersion?.let {
                     if (kernelVersion.isGKI()) Natives.isLkmMode else null
                 }
+                val pageState = LocalPagerState.current
+                val coroutineScope = rememberCoroutineScope()
 
                 Column(
                     modifier = Modifier.padding(vertical = 12.dp),
@@ -180,18 +173,16 @@ fun HomePager(
                     StatusCard(
                         kernelVersion, ksuVersion, lkmMode,
                         onClickInstall = {
-                            navigator.navigate(InstallScreenDestination) {
-                                launchSingleTop = true
-                            }
+                            navigator.push(Route.Install)
                         },
                         onClickSuperuser = {
                             coroutineScope.launch {
-                                pagerState.animateScrollToPage(3)
+                                pageState.animateScrollToPage(page = 1, animationSpec = tween(easing = EaseInOut))
                             }
                         },
                         onclickModule = {
                             coroutineScope.launch {
-                                pagerState.animateScrollToPage(1)
+                                pageState.animateScrollToPage(page = 2, animationSpec = tween(easing = EaseInOut))
                             }
                         },
                         themeMode = themeMode
@@ -275,8 +266,6 @@ fun RebootDropdownItem(
 
 @Composable
 private fun TopBar(
-    kernelVersion: KernelVersion,
-    onInstallClick: () -> Unit,
     scrollBehavior: ScrollBehavior,
     hazeState: HazeState,
     hazeStyle: HazeStyle,
@@ -470,7 +459,7 @@ private fun StatusCard(
                     BasicComponent(
                         title = stringResource(R.string.home_not_installed),
                         summary = stringResource(R.string.home_click_to_install),
-                        leftAction = {
+                        startAction = {
                             Icon(
                                 Icons.Rounded.ErrorOutline,
                                 stringResource(R.string.home_not_installed),
@@ -494,7 +483,7 @@ private fun StatusCard(
                     BasicComponent(
                         title = stringResource(R.string.home_unsupported),
                         summary = stringResource(R.string.home_unsupported_reason),
-                        leftAction = {
+                        startAction = {
                             Icon(
                                 Icons.Rounded.ErrorOutline,
                                 stringResource(R.string.home_unsupported),
@@ -557,10 +546,9 @@ fun LearnMoreCard() {
         BasicComponent(
             title = stringResource(R.string.home_learn_kernelsu),
             summary = stringResource(R.string.home_click_to_learn_kernelsu),
-            rightActions = {
+            endActions = {
                 Icon(
-                    modifier = Modifier.size(28.dp),
-                    imageVector = Icons.Rounded.Link,
+                    imageVector = MiuixIcons.Link,
                     tint = colorScheme.onSurface,
                     contentDescription = null
                 )
@@ -583,10 +571,9 @@ fun DonateCard() {
         BasicComponent(
             title = stringResource(R.string.home_support_title),
             summary = stringResource(R.string.home_support_content),
-            rightActions = {
+            endActions = {
                 Icon(
-                    modifier = Modifier.size(28.dp),
-                    imageVector = Icons.Rounded.Link,
+                    imageVector = MiuixIcons.Link,
                     tint = colorScheme.onSurface,
                     contentDescription = null
                 )

@@ -25,8 +25,6 @@ import me.weishu.kernelsu.ui.component.SearchStatus
 import me.weishu.kernelsu.ui.util.HanziToPinyin
 import me.weishu.kernelsu.ui.util.isNetworkAvailable
 import me.weishu.kernelsu.ui.util.listModules
-import me.weishu.kernelsu.ui.util.module.RepoSummary
-import me.weishu.kernelsu.ui.util.module.fetchRepoIndex
 import me.weishu.kernelsu.ui.util.module.sanitizeVersionString
 import org.json.JSONArray
 import org.json.JSONObject
@@ -55,6 +53,8 @@ class ModuleViewModel : ViewModel() {
         val hasWebUi: Boolean,
         val hasActionScript: Boolean,
         val metamodule: Boolean,
+        val actionIconPath: String?,
+        val webUiIconPath: String?,
     )
 
     @Immutable
@@ -202,7 +202,9 @@ class ModuleViewModel : ViewModel() {
                                 obj.optString("updateJson"),
                                 obj.optBoolean("web"),
                                 obj.optBoolean("action"),
-                                (obj.optInt("metamodule") != 0) or obj.optBoolean("metamodule")
+                                (obj.optInt("metamodule") != 0) or obj.optBoolean("metamodule"),
+                                obj.optString("actionIcon").takeIf { it.isNotBlank() },
+                                obj.optString("webuiIcon").takeIf { it.isNotBlank() }
                             )
                         }.toList()
                 }.getOrElse {
@@ -228,22 +230,6 @@ class ModuleViewModel : ViewModel() {
             }
 
             Log.i(TAG, "load cost: ${SystemClock.elapsedRealtime() - start}, modules: $modules")
-        }
-    }
-
-    private val _repoIndex = mutableStateMapOf<String, RepoSummary>()
-
-    suspend fun refreshRepoIndex() {
-        val parsed = withContext(Dispatchers.IO) {
-            val map = fetchRepoIndex()
-            if (map.isEmpty()) null else map.entries.map { it.key to it.value }
-        }
-
-        withContext(Dispatchers.Main) {
-            if (parsed != null) {
-                _repoIndex.clear()
-                parsed.forEach { (id, summary) -> _repoIndex[id] = summary }
-            }
         }
     }
 
@@ -298,21 +284,6 @@ class ModuleViewModel : ViewModel() {
                 }
                 updateInfoInFlight.remove(id)
             }
-
-            modules.forEach { m ->
-                val cache = updateInfoCache[m.id]
-                val hasUpdateJson = cache?.info?.downloadUrl?.isNotEmpty() == true
-                if (!hasUpdateJson) {
-                    val repo = _repoIndex[m.id]
-                    if (repo != null) {
-                        if (repo.versionCode > m.versionCode && repo.downloadUrl.isNotBlank()) {
-                            val info = ModuleUpdateInfo(downloadUrl = repo.downloadUrl, version = repo.latestVersion, changelog = "")
-                            updateInfoCache[m.id] = ModuleUpdateCache(m.toSignature(), info)
-                            changedEntries += m.id to info
-                        }
-                    }
-                }
-            }
         }
 
         if (removedIds.isEmpty() && changedEntries.isEmpty()) {
@@ -343,7 +314,7 @@ class ModuleViewModel : ViewModel() {
             ).execute()
             Log.d(TAG, "checkUpdate code: ${response.code}")
             if (response.isSuccessful) {
-                response.body?.string() ?: ""
+                response.body.string()
             } else {
                 ""
             }
