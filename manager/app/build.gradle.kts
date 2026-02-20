@@ -83,15 +83,6 @@ android {
         jniLibs {
             useLegacyPackaging = true
         }
-        resources {
-            // https://stackoverflow.com/a/58956288
-            // It will break Layout Inspector, but it's unused for release build.
-            excludes += "META-INF/*.version"
-            // https://github.com/Kotlin/kotlinx.coroutines?tab=readme-ov-file#avoiding-including-the-debug-infrastructure-in-the-resulting-apk
-            excludes += "DebugProbesKt.bin"
-            // https://issueantenna.com/repo/kotlin/kotlinx.coroutines/issues/3158
-            excludes += "kotlin-tooling-metadata.json"
-        }
     }
 
     externalNativeBuild {
@@ -143,6 +134,12 @@ android {
     }
 }
 
+androidComponents {
+    onVariants(selector().withBuildType("release")) {
+        it.packaging.resources.excludes.addAll(listOf("META-INF/**", "kotlin/**", "org/**", "**.bin"))
+    }
+}
+
 base {
     archivesName.set(
         "KernelSU_${managerVersionName}_${managerVersionCode}"
@@ -181,6 +178,8 @@ dependencies {
     implementation(libs.androidx.webkit)
 
     implementation(libs.lsposed.cxx)
+
+    implementation(libs.hiddenapibypass)
 
     implementation(libs.miuix)
     implementation(libs.miuix.icons)

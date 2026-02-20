@@ -173,27 +173,26 @@ fun ModulePager(
     bottomInnerPadding: Dp
 ) {
     val viewModel = viewModel<ModuleViewModel>()
+    val modules = viewModel.moduleList
     val scope = rememberCoroutineScope()
     val searchStatus by viewModel.searchStatus
 
     val context = LocalContext.current
+    var isInitialized by rememberSaveable { mutableStateOf(false) }
     val prefs = context.getSharedPreferences("settings", Context.MODE_PRIVATE)
-
-    val modules = viewModel.moduleList
 
     LaunchedEffect(Unit) {
         when {
-            viewModel.moduleList.isEmpty() -> {
+            !isInitialized || modules.isEmpty() -> {
                 viewModel.checkModuleUpdate = prefs.getBoolean("module_check_update", true)
                 viewModel.sortEnabledFirst = prefs.getBoolean("module_sort_enabled_first", false)
                 viewModel.sortActionFirst = prefs.getBoolean("module_sort_action_first", false)
-                viewModel.fetchModuleList()
-                scope.launch { viewModel.syncModuleUpdateInfo(viewModel.moduleList) }
+                viewModel.fetchModuleList(checkUpdate = true)
+                isInitialized = true
             }
 
             viewModel.isNeedRefresh -> {
-                viewModel.fetchModuleList()
-                scope.launch { viewModel.syncModuleUpdateInfo(viewModel.moduleList) }
+                viewModel.fetchModuleList(checkUpdate = true)
             }
         }
     }
@@ -203,7 +202,6 @@ fun ModulePager(
     }
 
     LaunchedEffect(modules) {
-        viewModel.syncModuleUpdateInfo(modules)
         if (searchStatus.searchText.isNotEmpty()) {
             viewModel.updateSearchText(searchStatus.searchText)
         }
@@ -223,7 +221,6 @@ fun ModulePager(
     val hideInstallButton = isSafeMode || magiskInstalled
 
     val scrollBehavior = MiuixScrollBehavior()
-    val listState = rememberLazyListState()
     var fabVisible by remember { mutableStateOf(true) }
     var scrollDistance by remember { mutableFloatStateOf(0f) }
     val dynamicTopPadding by remember {
@@ -454,8 +451,6 @@ fun ModulePager(
 
         val success = loadingDialog.withLoading {
             withContext(Dispatchers.IO) {
-                Shortcut.deleteModuleActionShortcut(context, module.id)
-                Shortcut.deleteModuleWebUiShortcut(context, module.id)
                 uninstallModule(module.id)
             }
         }
@@ -518,6 +513,7 @@ fun ModulePager(
         }
     }
 
+    val listState = rememberLazyListState()
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -835,7 +831,7 @@ fun ModulePager(
                     hazeStyle = hazeStyle
                 ) { boxHeight ->
                     ModuleList(
-                        navigator,
+                        navigator = navigator,
                         viewModel = viewModel,
                         modifier = Modifier
                             .fillMaxHeight()
@@ -1355,7 +1351,7 @@ fun ModuleItem(
 
         Row {
             AnimatedVisibility(
-                visible = module.enabled && !module.remove,
+                visible = module.enabled && !module.remove && !module.update,
                 enter = fadeIn(),
                 exit = fadeOut()
             ) {
