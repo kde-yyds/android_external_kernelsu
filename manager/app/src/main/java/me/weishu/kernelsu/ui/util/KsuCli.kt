@@ -141,7 +141,7 @@ fun getModuleCount(): Int {
 }
 
 fun getSuperuserCount(): Int {
-    return Natives.allowList.size
+    return Natives.getSuperuserCount()
 }
 
 fun toggleModule(id: String, enable: Boolean): Boolean {
@@ -257,8 +257,10 @@ fun uninstallPermanently(
 sealed class LkmSelection : Parcelable {
     @Parcelize
     data class LkmUri(val uri: Uri) : LkmSelection()
+
     @Parcelize
     data class KmiString(val value: String) : LkmSelection()
+
     @Parcelize
     data object KmiNone : LkmSelection()
 }
